@@ -29,9 +29,11 @@ dependencies {
     annotationProcessor("info.picocli:picocli-codegen:$picocliVersion")
     implementation("info.picocli:picocli:$picocliVersion")
 
-//    implementation "org.jitsi:ice4j:1.0"
-//    implementation 'com.github.jitsi:ice4j:59693a4894'
-    implementation("com.github.Geosearchef:ice4j:52c8e4bcef")
+    //implementation "org.jitsi:ice4j:1.0"
+    //implementation 'com.github.jitsi:ice4j:59693a4894'
+    //implementation("com.github.Geosearchef:ice4j:52c8e4bcef")
+    //implementation 'org.jitsi:ice4j:3.0'
+    implementation 'org.jitsi:ice4j:3.0-64-g27ad37d'
     implementation("com.github.faforever:JJsonRpc:37669e0fed")
     implementation("com.google.code.gson:gson:$gsonVersion")
     implementation("com.google.guava:guava:$guavaVersion")

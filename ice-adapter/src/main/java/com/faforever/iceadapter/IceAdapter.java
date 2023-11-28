@@ -56,7 +56,7 @@ public class IceAdapter implements Callable<Integer> {
 
         loadOptions(iceOptions);
 
-        TrayIcon.create();
+        //TrayIcon.create();
 
         //Configure file appender
 //		RollingFileAppender fileAppender = (ch.qos.logback.core.rolling.RollingFileAppender)((ch.qos.logback.classic.Logger)log).getAppender("FILE");

@@ -110,7 +110,7 @@ public class PeerIceModule {
 
         CompletableFuture gatheringFuture = CompletableFuture.runAsync(() -> {
             try {
-                component = agent.createComponent(mediaStream, Transport.UDP, MINIMUM_PORT + (int) (Math.random() * 999.0), MINIMUM_PORT, MINIMUM_PORT + 1000);
+                component = agent.createComponent(mediaStream, MINIMUM_PORT + (int) (Math.random() * 999.0), MINIMUM_PORT, MINIMUM_PORT + 1000);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -164,6 +164,8 @@ public class PeerIceModule {
         if (IceAdapter.PING_COUNT <= 0 || allIceServers.isEmpty()) {
             return allIceServers;
         }
+
+        log.info("All ice servers: {}", allIceServers.stream().map(it -> "[" + it.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")) + "]").collect(Collectors.joining(", ")));
 
         List<IceServer> fafIceServers = allIceServers.stream()
                 .filter(server -> server.getTurnAddresses().stream()
@@ -264,6 +266,7 @@ public class PeerIceModule {
             }
 
             if (agent.getState() == IceProcessingState.FAILED) {//TODO null pointer due to no agent?
+                log.error(getLogPrefix() + "agent.getState() == IceProcessingState.FAILED");
                 onConnectionLost();
                 return;
             }
@@ -312,6 +315,7 @@ public class PeerIceModule {
         }
 
         if (iceState == DISCONNECTED) {
+            log.warn("iceState == DISCONNECTED " + getLogPrefix());
             return;//TODO: will this kill the life cycle?
         }
 
@@ -348,14 +352,17 @@ public class PeerIceModule {
         debug().peerStateChanged(this.peer);
 
         if (previousState == CONNECTED) {
+            log.warn(getLogPrefix() + "Reconnecting to " + this.peer.getRemoteLogin() + " (connection lost)");
             TrayIcon.showMessage("Reconnecting to " + this.peer.getRemoteLogin() + " (connection lost)");
         }
 
         if (previousState == CONNECTED && peer.isLocalOffer()) {
             //We were connected before, retry immediately
+            log.warn(getLogPrefix() + " Executor.executeDelayed(0, this::reinitIce");
             Executor.executeDelayed(0, this::reinitIce);
         } else if (peer.isLocalOffer()) {
             //Last ice attempt didn't succeed, so wait a bit
+            log.warn(getLogPrefix() + " Executor.executeDelayed(5000, this::reinitIce)");
             Executor.executeDelayed(5000, this::reinitIce);
         }
     }

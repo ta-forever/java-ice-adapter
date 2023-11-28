@@ -59,7 +59,14 @@ public class RPCService {
 
 	public static void onConnectionStateChanged(String newState) {
 		if (!skipRPCMessages) {
-			getPeerOrWait().sendNotification("onConnectionStateChanged", Arrays.asList(newState));
+			log.info("[RPCService::onConnectionStateChanged] jjsonPeer=getPeerOrWait()'ing");
+			JJsonPeer jjsonPeer = getPeerOrWait();
+			log.info("[RPCService::onConnectionStateChanged] jjsonPeer.sendNotification");
+			jjsonPeer.sendNotification("onConnectionStateChanged", Arrays.asList(newState));
+			log.info("[RPCService::onConnectionStateChanged] sent");
+		}
+		else {
+			log.info("[RPCService::onConnectionStateChanged] not sending onConnectionStateChanged because skipRPCMessages");
 		}
 	}
 

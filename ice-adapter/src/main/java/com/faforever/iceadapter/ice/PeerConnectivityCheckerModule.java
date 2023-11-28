@@ -51,7 +51,7 @@ public class PeerConnectivityCheckerModule {
         running = false;
 
         if (checkerThread != null) {
-            checkerThread.stop();
+            checkerThread.interrupt();
             checkerThread = null;
         }
     }
@@ -95,11 +95,15 @@ public class PeerConnectivityCheckerModule {
             try {
                 Thread.sleep(ECHO_INTERVAL);
             } catch (InterruptedException e) {
-                log.warn("Sleeping checkerThread was interrupted");
+                log.warn("[checkerThread] Sleeping checkerThread was interrupted");
+            }
+            if (this.checkerThread == null) {
+                log.info("[checkerThread] returning from thread because this.checkerThread is null");
+                return;
             }
 
             if (System.currentTimeMillis() - lastPacketReceived > 10000) {
-                log.warn("Didn't receive any answer to echo requests for the past 10 seconds from {}, aborting connection", ice.getPeer().getRemoteLogin());
+                log.warn("[checkerThread] Didn't receive any answer to echo requests for the past 10 seconds from {}, aborting connection", ice.getPeer().getRemoteLogin());
                 new Thread(ice::onConnectionLost).start();
                 return;
             }

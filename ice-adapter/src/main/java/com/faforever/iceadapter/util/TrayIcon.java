@@ -23,14 +23,13 @@ public class TrayIcon {
 	public static void create() {
 		if (!isTrayIconSupported()) {
 			log.warn("Tray icon not supported");
-			return;
 		}
 
 		Image fafLogo = null;
 		try {
 			fafLogo = ImageIO.read(new URL(FAF_LOGO_URL));
 		} catch (IOException e) {
-			log.error("Couldn't load FAF tray icon logo from URL");
+			log.warn("Couldn't load FAF tray icon logo from URL");
 			return;
 		}
 
