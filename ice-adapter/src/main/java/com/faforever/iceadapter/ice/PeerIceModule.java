@@ -165,23 +165,8 @@ public class PeerIceModule {
             return allIceServers;
         }
 
-        log.info("All ice servers: {}", allIceServers.stream().map(it -> "[" + it.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")) + "]").collect(Collectors.joining(", ")));
-
-        List<IceServer> fafIceServers = allIceServers.stream()
-                .filter(server -> server.getTurnAddresses().stream()
-                        .anyMatch(transportAddress -> transportAddress.getHostString().contains("faforever.com")))
-                .collect(Collectors.toList());
-        // Try official servers first
-        List<IceServer> viableIceServers = fafIceServers.stream()
-                .filter(IceServer::hasAcceptableLatency)
-                .collect(Collectors.toList());
-        if (!viableIceServers.isEmpty()) {
-            log.info("Using official ice servers: {}", viableIceServers.stream().map(it -> "[" + it.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")) + "]").collect(Collectors.joining(", ")));
-            return viableIceServers;
-        }
-
         // Try servers with acceptable latency
-        viableIceServers = allIceServers.stream()
+        List<IceServer> viableIceServers = allIceServers.stream()
                 .filter(IceServer::hasAcceptableLatency)
                 .collect(Collectors.toList());
         if (!viableIceServers.isEmpty()) {
@@ -189,20 +174,7 @@ public class PeerIceModule {
             return viableIceServers;
         }
 
-        // Try the closest server
-        Optional<IceServer> closestIceServer = allIceServers.stream()
-                .filter(server -> server.getRoundTripTime().join().isPresent())
-                .min(Comparator.comparing(server -> server.getRoundTripTime().join().getAsDouble()));
-        if (closestIceServer.isPresent()) {
-            log.info("Using closest ice server: {}", closestIceServer.get().getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")));
-            viableIceServers.add(closestIceServer.get());
-        }
-        if (!viableIceServers.isEmpty()) {
-            log.info("Using all reachable ice servers: {}", viableIceServers.stream().map(it -> "[" + it.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")) + "]").collect(Collectors.joining(", ")));
-            return viableIceServers;
-        }
-
-        log.info("Using all ice servers: {}", viableIceServers.stream().map(it -> "[" + it.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")) + "]").collect(Collectors.joining(", ")));
+        log.info("Using all ice servers: {}", allIceServers.stream().map(it -> "[" + it.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")) + "]").collect(Collectors.joining(", ")));
         return allIceServers;
     }
 

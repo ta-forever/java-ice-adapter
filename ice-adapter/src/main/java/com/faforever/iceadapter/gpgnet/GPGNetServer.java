@@ -120,7 +120,6 @@ public class GPGNetServer {
                 }
             }
 
-            log.info("Received GPGNet message: {} {}", command, args.stream().map(Object::toString).collect(Collectors.joining(" ")));
             RPCService.onGpgNetMessageReceived(command, args);
         }
 
