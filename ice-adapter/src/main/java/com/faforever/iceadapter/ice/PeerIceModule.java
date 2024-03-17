@@ -165,16 +165,23 @@ public class PeerIceModule {
             return allIceServers;
         }
 
+        allIceServers.forEach(server -> log.info("ICE Server: [{}], ping={}ms",
+                server.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")),
+                server.getRoundTripTime().join().orElse(Double.NaN)));
+
         // Try servers with acceptable latency
         List<IceServer> viableIceServers = allIceServers.stream()
                 .filter(IceServer::hasAcceptableLatency)
                 .collect(Collectors.toList());
         if (!viableIceServers.isEmpty()) {
-            log.info("Using all viable ice servers: {}", viableIceServers.stream().map(it -> "[" + it.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")) + "]").collect(Collectors.joining(", ")));
+            log.info("Using {} viable ice servers:", viableIceServers.size());
+            viableIceServers.forEach(server -> log.info("ICE Server: [{}], ping={}ms",
+                    server.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")),
+                    server.getRoundTripTime().join().orElse(Double.NaN)));
             return viableIceServers;
         }
 
-        log.info("Using all ice servers: {}", allIceServers.stream().map(it -> "[" + it.getTurnAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", ")) + "]").collect(Collectors.joining(", ")));
+        log.info("Using all ice servers");
         return allIceServers;
     }
 
