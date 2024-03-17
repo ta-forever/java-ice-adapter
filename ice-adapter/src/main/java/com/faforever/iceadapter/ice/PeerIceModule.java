@@ -251,7 +251,9 @@ public class PeerIceModule {
             }
         }
 
-        log.debug(getLogPrefix() + "ICE terminated, connected, selected candidate pair: " + component.getSelectedPair().getLocalCandidate().getType().toString() + " <-> " + component.getSelectedPair().getRemoteCandidate().getType().toString());
+        LocalCandidate lc = component.getSelectedPair().getLocalCandidate();
+        RemoteCandidate rc = component.getSelectedPair().getRemoteCandidate();
+        log.debug(getLogPrefix() + "ICE termianted, connected, selected candidate pair {}({}) <-> {}({})", lc.getTransportAddress().toString(), lc.getType().toString(), rc.getTransportAddress().toString(), rc.getType().toString());
 
         //We are connected
         connected = true;
