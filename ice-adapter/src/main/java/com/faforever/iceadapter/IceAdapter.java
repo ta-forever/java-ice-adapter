@@ -37,7 +37,7 @@ public class IceAdapter implements Callable<Integer> {
     public static int LOBBY_PORT = 0;
 
     public static int PING_COUNT = 1;
-    public static double ACCEPTABLE_LATENCY = 250.0;
+    public static double ACCEPTABLE_LATENCY = 350.0;
 
     public static volatile GameSession gameSession;
 
