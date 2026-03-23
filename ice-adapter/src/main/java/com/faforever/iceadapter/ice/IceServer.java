@@ -18,7 +18,7 @@ public class IceServer {
   private String turnCredential = "";
   private CompletableFuture<OptionalDouble> roundTripTime = CompletableFuture.completedFuture(OptionalDouble.empty());
 
-  public static final Pattern urlPattern = Pattern.compile("(?<protocol>stun|turn):(?<host>(\\w|\\.)+)(:(?<port>\\d+))?(\\?transport=(?<transport>(tcp|udp)))?");
+  public static final Pattern urlPattern = Pattern.compile("(?<protocol>stun|turn):\\[?(?<host>[0-9a-fA-F:.\\w]+)\\]?(:(?<port>\\d+))?(\\?transport=(?<transport>(tcp|udp)))?");
 
   public boolean hasAcceptableLatency() {
       OptionalDouble rtt = this.getRoundTripTime().join();
