@@ -2,6 +2,7 @@ package com.faforever.iceadapter.gpgnet;
 
 import com.faforever.iceadapter.IceAdapter;
 import com.faforever.iceadapter.rpc.RPCService;
+import com.faforever.iceadapter.util.Executor;
 import com.faforever.iceadapter.util.NetworkToolbox;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -195,6 +196,21 @@ public class GPGNetServer {
                 RPCService.onConnectionStateChanged("Disconnected");
 
                 IceAdapter.onFAShutdown();
+
+                if (RPCService.isClientConnectionLost()) {
+                    // The controlling client died earlier but we kept relaying so the player
+                    // could finish the game. Now the game itself has disconnected and there is
+                    // no client left to tell us to quit, so shut the adapter down ourselves.
+                    // Delayed, so a transient gpgnet reconnect (e.g. host migration) doesn't
+                    // trigger a premature exit.
+                    log.info("Game connection lost and RPC client already gone; scheduling adapter shutdown");
+                    Executor.executeDelayed(30000, () -> {
+                        if (!GPGNetServer.isConnected() && RPCService.isClientConnectionLost()) {
+                            log.info("Adapter idle after client loss and game end; stopping adapter");
+                            IceAdapter.close();
+                        }
+                    });
+                }
             }
         }
         debug().gpgnetConnectedDisconnected();

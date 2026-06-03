@@ -30,6 +30,11 @@ public class RPCService {
 
 	private static volatile boolean skipRPCMessages = false;
 
+	// Set once the controlling client (the first RPC peer) has gone away while a game
+	// was still in progress. GPGNetServer uses this to know it must shut the adapter
+	// down itself once the game ends, since the (now-dead) client can no longer do so.
+	private static volatile boolean clientConnectionLost = false;
+
 	public static void init() {
 		log.info("Creating RPC server on port {}", IceAdapter.RPC_PORT);
 
@@ -41,20 +46,42 @@ public class RPCService {
 		tcpServer.getFirstPeer().thenAccept(firstPeer -> {
 			firstPeer.onConnectionLost(() -> {
 				GameState gameState = GPGNetServer.getGameState().orElse(null);
-				if (gameState == GameState.LAUNCHING) {
+				String gameStateName = gameState == null ? "null" : gameState.getName();
+				// Keep relaying as long as the game is still connected and hasn't ended:
+				// a client crash/kill mid-game must NOT drop the player from an otherwise
+				// healthy game. The adapter shuts itself down once the game actually ends
+				// (GPGNetServer.onGpgnetConnectionLost) or on an explicit quit. Previously
+				// only GameState.LAUNCHING was spared, so a crash while in LOBBY/PLAYING
+				// tore down the relay and disconnected the player.
+				boolean gameStillRunning = GPGNetServer.isConnected() && gameState != GameState.ENDED;
+				if (gameState == GameState.LAUNCHING || gameStillRunning) {
 					skipRPCMessages = true;
-					log.warn("Lost connection to first RPC Peer. GameState: LAUNCHING, NOT STOPPING!");
-					if (InfoWindow.INSTANCE == null) {
-						Debug.ENABLE_INFO_WINDOW = true;
-						Debug.init();
+					clientConnectionLost = true;
+					log.warn("Lost connection to first RPC Peer. GameState: {}, NOT STOPPING (game still running, keeping relay alive)", gameStateName);
+					try {
+						if (InfoWindow.INSTANCE == null) {
+							Debug.ENABLE_INFO_WINDOW = true;
+							Debug.init();
+						}
+						InfoWindow.INSTANCE.show();
+					} catch (Throwable t) {
+						// Showing the debug window must never compromise keeping the relay alive.
+						log.warn("Could not show info window after client disconnect", t);
 					}
-					InfoWindow.INSTANCE.show();
 				} else {
-					log.info("Lost connection to first RPC Peer. GameState: {}, Stopping adapter...", gameState.getName());
+					log.info("Lost connection to first RPC Peer. GameState: {}, Stopping adapter...", gameStateName);
 					IceAdapter.close();
 				}
 			});
 		});
+	}
+
+	/**
+	 * @return whether the controlling client disconnected while a game was still running
+	 * (in which case the adapter is being kept alive to finish the game).
+	 */
+	public static boolean isClientConnectionLost() {
+		return clientConnectionLost;
 	}
 
 	public static void onConnectionStateChanged(String newState) {
