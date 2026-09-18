@@ -36,6 +36,15 @@ public class PeerIceModule {
     private static final int FORCE_SRFLX_COUNT = 1;
     private static final int FORCE_RELAY_COUNT = 2;
 
+    // How long to wait for the peer's answer before re-offering. See sendOfferAndAwaitAnswer().
+    private static final int AWAITING_CANDIDATES_TIMEOUT = 6000;
+    // Re-offers on the SAME agent before giving up and tearing down. One retry costs one RPC
+    // message and keeps our ufrag/password valid, so an answer that is merely late still
+    // completes the connection instead of costing the whole session. Kept at 1: each retry
+    // also adds a full AWAITING_CANDIDATES_TIMEOUT of dead time before a fresh agent is
+    // tried, which is wasted whenever the peer genuinely cannot answer.
+    private static final int OFFER_RETRIES = 1;
+
     private Peer peer;
 
     private Agent agent;
@@ -137,6 +146,25 @@ public class PeerIceModule {
         }
 
 
+        offerRetriesRemaining = OFFER_RETRIES;
+        sendOfferAndAwaitAnswer();
+    }
+
+    /**
+     * Packs this agent's already-gathered candidates into an offer, sends it, and arms the
+     * deadline for the peer's answer.
+     *
+     * Split out of gatherCandidates() so a missing answer can be retried WITHOUT rebuilding
+     * the agent: the answer is bound to this agent's ufrag/password, and onConnectionLost()
+     * frees the agent, so a tear-down makes every answer still in flight unusable -- it is
+     * then discarded as "Received candidates unexpectedly" while the peer that did answer
+     * latches CONNECTED, leaving the two ends out of phase (observed 2026-09-06, an answer
+     * 0.9 s late).
+     *
+     * NOTE: must not call gatherCandidates() again -- that would add a second set of
+     * candidate harvesters and a second component to the same agent.
+     */
+    private void sendOfferAndAwaitAnswer() {
         int previousConnectivityAttempts = getConnectivityAttempsInThePast(FORCE_SRFLX_RELAY_INTERVAL);
         CandidatesMessage localCandidatesMessage = CandidateUtil.packCandidates(IceAdapter.id, peer.getRemoteId(), agent, component, previousConnectivityAttempts < FORCE_SRFLX_COUNT && IceAdapter.ALLOW_HOST, previousConnectivityAttempts < FORCE_RELAY_COUNT && IceAdapter.ALLOW_REFLEXIVE, IceAdapter.ALLOW_RELAY);
         log.debug(getLogPrefix() + "Sending own candidates to {}, offered candidates: {}", peer.getRemoteId(), localCandidatesMessage.getCandidates().stream().map(it -> it.getType().toString() + "(" + it.getProtocol() + ")").collect(Collectors.joining(", ")));
@@ -145,12 +173,20 @@ public class PeerIceModule {
 
         //Make sure to abort the connection process and reinitiate when we haven't received an answer to our offer in 6 seconds, candidate packet was probably lost
         final int currentacei = ++awaitingCandidatesEventId;
-        Executor.executeDelayed(6000, () -> {
+        Executor.executeDelayed(AWAITING_CANDIDATES_TIMEOUT, () -> {
             if(peer.isClosing()) {
                 log.warn(getLogPrefix() + "Peer {} not connected anymore, aborting reinitiation of ICE", peer.getRemoteId());
                 return;
             }
             if (iceState == AWAITING_CANDIDATES && currentacei == awaitingCandidatesEventId) {
+                if (offerRetriesRemaining > 0) {
+                    offerRetriesRemaining--;
+                    log.info(getLogPrefix() + "No answer within {}ms, re-offering on the same agent ({} retries left)",
+                            AWAITING_CANDIDATES_TIMEOUT, offerRetriesRemaining);
+                    sendOfferAndAwaitAnswer();
+                    return;
+                }
+                log.warn(getLogPrefix() + "No answer after {} offers, tearing down", OFFER_RETRIES + 1);
                 onConnectionLost();
             }
         });
@@ -158,6 +194,9 @@ public class PeerIceModule {
 
     //How often have we been waiting for a response to local candidates/offer
     private volatile int awaitingCandidatesEventId = 0;
+
+    //Re-offers left on the current agent before we tear it down
+    private volatile int offerRetriesRemaining = 0;
 
     private List<IceServer> getViableIceServers() {
         List<IceServer> allIceServers = GameSession.getIceServers();
