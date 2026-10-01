@@ -122,7 +122,7 @@ public class GameSession {
                         .map(IceServer.urlPattern::matcher)
                         .filter(Matcher::matches)
                         .forEach(matcher -> {
-                            String host = matcher.group("host");
+                            String host = IceServer.hostOf(matcher);
                             int port = Optional.ofNullable(matcher.group("port")).map(Integer::parseInt).orElse(3478);
                             Transport transport = Optional.ofNullable(matcher.group("transport")).map(Transport::parse).orElse(Transport.UDP);
 
